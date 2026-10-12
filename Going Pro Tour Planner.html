@@ -1,0 +1,421 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Going Pro Tour Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a scoreboard header over a week-by-week "draw sheet" of the season; tabs switch between my season, the ITF calendar and the entry guide */
+:root{
+  --court:#1f4f86;        /* hard-court blue */
+  --court-deep:#173a63;
+  --surround:#2f6b4f;     /* green court surround */
+  --ball:#d4e04a;         /* optic yellow, used sparingly */
+  --bg:#f3f5f7;
+  --panel:#ffffff;
+  --fg:#16212e;
+  --muted:#5b6876;
+  --line:#d8dee5;
+  --chip:#e8eef5;
+  --ok:#2c7a4b; --okbg:#e3f3e9;
+  --warn:#9a6200; --warnbg:#fbf0d9;
+  --bad:#a8322a; --badbg:#f8e3e1;
+  --info:#1f4f86; --infobg:#e3ecf7;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --court:#6f9fd8;--court-deep:#0f2440;--surround:#5fa883;--ball:#d4e04a;
+  --bg:#0e141b;--panel:#161e28;--fg:#e4eaf1;--muted:#94a1b0;--line:#2a3542;--chip:#1f2a37;
+  --ok:#6cc896;--okbg:#173126;--warn:#e7b65a;--warnbg:#33280f;--bad:#f08a80;--badbg:#3a1a17;--info:#8db8ec;--infobg:#172840;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --court:#6f9fd8;--court-deep:#0f2440;--surround:#5fa883;--ball:#d4e04a;
+  --bg:#0e141b;--panel:#161e28;--fg:#e4eaf1;--muted:#94a1b0;--line:#2a3542;--chip:#1f2a37;
+  --ok:#6cc896;--okbg:#173126;--warn:#e7b65a;--warnbg:#33280f;--bad:#f08a80;--badbg:#3a1a17;--info:#8db8ec;--infobg:#172840;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:0 48px}
+header.board{background:var(--court-deep);color:#f2f6fb;padding-block:22px 18px;position:relative;overflow:hidden}
+header.board::after{content:"";position:absolute;inset:auto 0 0 0;height:3px;background:repeating-linear-gradient(90deg,#f2f6fb 0 40px,transparent 40px 48px);opacity:.55}
+header .wrap{padding-block:0}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#b9c9dc}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1;margin:6px 0 10px;letter-spacing:.01em;text-wrap:balance}
+h1 .dot{display:inline-block;width:.42em;height:.42em;border-radius:50%;background:var(--ball);margin-left:.15em;vertical-align:.1em}
+.sub{color:#cfdbe8;max-width:68ch;margin:0}
+.stats{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:16px}
+.stat{display:flex;flex-direction:column}
+.stat b{font-family:var(--f-display);font-size:30px;line-height:1;font-weight:600;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:#b9c9dc;letter-spacing:.04em;text-transform:uppercase}
+nav.tabs{display:flex;gap:4px;margin:18px 0 0;flex-wrap:wrap}
+nav.tabs button{font:600 15px var(--f-body);background:transparent;border:1px solid rgba(255,255,255,.25);color:#e6eef7;padding:8px 14px;border-radius:999px;cursor:pointer}
+nav.tabs button[aria-selected="true"]{background:var(--ball);color:#1a2410;border-color:var(--ball)}
+nav.tabs button:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible,textarea:focus-visible{outline:2px solid var(--court);outline-offset:2px}
+.alerts{margin-top:20px;display:grid;gap:8px}
+.alert{display:flex;gap:12px;align-items:baseline;background:var(--warnbg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px 14px;flex-wrap:wrap}
+.alert .when{font-family:var(--f-mono);font-size:13px;color:var(--warn);font-weight:500;min-width:9ch}
+.alert.urgent{background:var(--badbg)}.alert.urgent .when{color:var(--bad)}
+h2{font-family:var(--f-display);font-weight:600;font-size:28px;margin:28px 0 4px;letter-spacing:.01em}
+.lede{color:var(--muted);margin:0 0 14px;max-width:72ch}
+/* season timeline */
+.weeks{display:grid;gap:10px}
+.week{display:grid;grid-template-columns:116px minmax(0,1fr);gap:14px;align-items:start;padding-block:12px;border-top:1px solid var(--line)}
+.wk-date{font-family:var(--f-mono);font-size:13px;color:var(--muted);line-height:1.35}
+.wk-date b{display:block;font-family:var(--f-display);font-size:22px;color:var(--fg);font-weight:600}
+.wk-body{display:grid;gap:8px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:8px;min-width:0}
+.card.planned{border-left:4px solid var(--court)}
+.card.conflict{border-left-color:var(--bad)}
+.card.ghost{background:transparent;border-style:dashed}
+.row1{display:flex;gap:8px 10px;align-items:center;flex-wrap:wrap}
+.cat{font-family:var(--f-display);font-weight:700;font-size:15px;padding:1px 8px;border-radius:4px;background:var(--court);color:#fff;letter-spacing:.03em}
+.cat.m15{background:var(--surround)}
+.name{font-weight:600;font-size:16px}
+.promo{color:var(--muted);font-size:13px}
+.meta{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--chip);color:var(--fg);white-space:nowrap}
+.chip.ok{background:var(--okbg);color:var(--ok)}.chip.warn{background:var(--warnbg);color:var(--warn)}.chip.bad{background:var(--badbg);color:var(--bad)}.chip.info{background:var(--infobg);color:var(--info)}
+.mono{font-family:var(--f-mono);font-size:12.5px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button.btn,a.btn{font:500 13.5px var(--f-body);border:1px solid var(--line);background:var(--panel);color:var(--fg);padding:6px 11px;border-radius:7px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+button.btn.primary{background:var(--court);border-color:var(--court);color:#fff}
+:root[data-theme="dark"] button.btn.primary{color:#0e141b}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) button.btn.primary{color:#0e141b}}
+button.btn:hover,a.btn:hover{border-color:var(--court)}
+select,input,textarea{font:14px var(--f-body);background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:6px 8px;max-width:100%}
+textarea{width:100%;min-height:54px;resize:vertical}
+.rest{color:var(--muted);font-size:14px;padding:4px 0}
+.note-ghost{font-size:13px;color:var(--muted)}
+/* calendar */
+.filters{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;position:sticky;top:env(safe-area-inset-top,0px);z-index:2}
+.fgroup{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.fgroup label.lab{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-right:4px}
+.tog{font:500 13px var(--f-body);border:1px solid var(--line);background:transparent;color:var(--fg);padding:4px 10px;border-radius:999px;cursor:pointer}
+.tog[aria-pressed="true"]{background:var(--court);border-color:var(--court);color:#fff}
+:root[data-theme="dark"] .tog[aria-pressed="true"]{color:#0e141b}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tog[aria-pressed="true"]{color:#0e141b}}
+.count{margin-left:auto;font-size:13px;color:var(--muted)}
+.cal-week h3{font-family:var(--f-display);font-weight:600;font-size:20px;margin:20px 0 8px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.cal-week h3 small{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-weight:400}
+.cal-list{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr))}
+.contact{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.contact code{font-family:var(--f-mono);font-size:12.5px;color:var(--fg);user-select:all;word-break:break-all}
+/* guide */
+.guide{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.guide .card h3{font-family:var(--f-display);font-size:21px;margin:0;font-weight:600}
+.guide p,.guide li{margin:0;max-width:65ch}
+.guide ol,.guide ul{margin:0;padding-left:20px;display:grid;gap:4px}
+.order{counter-reset:o;list-style:none;padding:0}
+form.add{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));align-items:end}
+form.add label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+form.add .wide{grid-column:1/-1}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:14px;z-index:9}
+.src{font-size:12.5px;color:var(--muted);margin-top:28px;border-top:1px solid var(--line);padding-top:12px}
+.src a{color:var(--court)}
+@media (max-width:560px){.week{grid-template-columns:1fr;gap:6px}.wk-date b{display:inline;margin-right:8px}.count{margin-left:0}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="board">
+  <div class="wrap">
+    <div class="eyebrow">ITF Men's World Tennis Tour · Hard courts · M15 / M25</div>
+    <h1>Going Pro Tour Planner<span class="dot" aria-hidden="true"></span></h1>
+    <p class="sub">Your week-by-week season built from the ITF calendar. US events first, Sharm El Sheikh and Monastir as the fallback blocks. Every deadline below follows the ITF rule: singles entry closes Thursday 14:00 GMT, 18 days before the Monday of the event.</p>
+    <div class="stats" id="stats"></div>
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button role="tab" id="tab-season" aria-selected="true" data-view="season">My season</button>
+      <button role="tab" id="tab-cal" aria-selected="false" data-view="cal">ITF calendar</button>
+      <button role="tab" id="tab-guide" aria-selected="false" data-view="guide">Getting in unranked</button>
+      <button role="tab" id="tab-add" aria-selected="false" data-view="add">Add an event</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="v-season">
+    <div class="alerts" id="alerts"></div>
+    <h2>Season by week</h2>
+    <p class="lede" id="seasonLede">Planned events sit on each Monday. Dashed cards are suggestions for open weeks; add one or leave the week for training.</p>
+    <div class="weeks" id="weeks"></div>
+  </section>
+
+  <section id="v-cal" hidden>
+    <h2>ITF calendar</h2>
+    <p class="lede">Snapshot of the men's ITF calendar from Oct 12, 2026 through the last published week (Jan 4, 2027). Cancelled events are left out.</p>
+    <div class="filters" id="filters">
+      <div class="fgroup" id="fRegion"><label class="lab">Where</label></div>
+      <div class="fgroup" id="fCat"><label class="lab">Level</label></div>
+      <div class="fgroup" id="fSurf"><label class="lab">Surface</label></div>
+      <div class="fgroup" id="fIO"><label class="lab">Court</label></div>
+      <div class="fgroup"><label class="lab">Entry</label><button class="tog" id="fOpen" aria-pressed="false">Still open</button></div>
+      <span class="count" id="count"></span>
+    </div>
+    <div id="cal"></div>
+  </section>
+
+  <section id="v-guide" hidden>
+    <h2>Getting into draws without a ranking</h2>
+    <p class="lede">How acceptance works for an unranked player at M15 and M25 level, and what to do for each event on your plan.</p>
+    <div class="guide">
+      <div class="card"><h3>Who gets in, in order</h3>
+        <ol class="order">
+          <li>1. ATP singles ranking</li>
+          <li>2. ITF World Tennis Ranking</li>
+          <li>3. World Tennis Number (WTN), if verified at 70%+ confidence</li>
+          <li>4. National ranking (top 500)</li>
+          <li>5. Unranked</li>
+        </ol>
+        <p class="note-ghost">The WTN used is the one held on the Monday before the entry deadline. A verified WTN is your best lever: it puts you ahead of every unranked entrant.</p>
+      </div>
+      <div class="card"><h3>Wild cards</h3>
+        <ul>
+          <li>Awarded by the tournament organiser with approval of the host national association (USTA in the US).</li>
+          <li>Email the tournament director 3–4 weeks out. Include your Notre Dame record (21-7, nationally ranked No. 50), career-high ranking, recent results and WTN.</li>
+          <li>Ask for a qualifying wild card as well as main draw. Qualifying WCs are far easier to get.</li>
+          <li>Enter through Tour Zone anyway, so you are on the list if the WC doesn't come.</li>
+        </ul>
+      </div>
+      <div class="card"><h3>Qualifying draw size matters</h3>
+        <ul>
+          <li>US events: 32-player qualifying. Without a WC or a strong WTN you'll usually sit on the alternates list.</li>
+          <li>Monastir and Sharm El Sheikh M15s: 64-player qualifying, every week. This is where unranked players realistically get matches.</li>
+          <li>Stacking 3–4 weeks in one place cuts travel cost and lets you sign in on site every week.</li>
+        </ul>
+      </div>
+      <div class="card"><h3>Deadlines and sign-in</h3>
+        <ul>
+          <li>Entry: Thursday 14:00 GMT, 18 days before the event's Monday.</li>
+          <li>Withdrawal: Tuesday 14:00 GMT, 13 days before. Withdraw after that and you risk a fine.</li>
+          <li>Qualifying sign-in: 18:00 local time the day before qualifying. On-site alternates sign in with the ITF Supervisor in person, or email then phone. Email alone doesn't count.</li>
+          <li>Entry fee: up to US$40 per event.</li>
+        </ul>
+      </div>
+      <div class="card"><h3>Before your first entry</h3>
+        <ul>
+          <li>Buy an IPIN membership and log in to World Tennis Tour Zone. That's where you enter and withdraw.</li>
+          <li>Register or verify your WTN at worldtennisnumber.com.</li>
+          <li>Complete the ITIA Tennis Integrity Protection Programme if Tour Zone asks for it.</li>
+        </ul>
+        <div class="actions"><a class="btn" href="https://tourzone.world.tennis/" target="_blank" rel="noopener">Open Tour Zone ↗</a><a class="btn" href="https://worldtennisnumber.com/" target="_blank" rel="noopener">World Tennis Number ↗</a></div>
+      </div>
+      <div class="card"><h3>Status steps used on this page</h3>
+        <ul>
+          <li><b>Considering</b>: on your radar.</li>
+          <li><b>WC requested</b>: email sent to the TD.</li>
+          <li><b>Entered</b>: entry made in Tour Zone.</li>
+          <li><b>Accepted Q / MD</b>: you're on the acceptance list.</li>
+          <li><b>Alternate</b>: plan to sign in on site.</li>
+          <li><b>Withdrawn</b> or <b>Skipped</b>: off the plan, kept for your record.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="v-add" hidden>
+    <h2>Add an event from the ITF site</h2>
+    <p class="lede">When new weeks appear on the ITF men's calendar, copy the details here. The entry and withdrawal deadlines are worked out for you.</p>
+    <form class="add card" id="addForm" autocomplete="off">
+      <label>Start date (Monday)<input type="date" id="a-start" required></label>
+      <label>Level<select id="a-cat"><option>M15</option><option>M25</option></select></label>
+      <label>Tournament name<input id="a-name" placeholder="M15 Monastir" required></label>
+      <label>Country code<input id="a-nat" placeholder="TUN" maxlength="3" required></label>
+      <label>Surface<select id="a-sf"><option>Hard</option><option>Clay</option><option>Carpet</option><option>Grass</option></select></label>
+      <label>Court<select id="a-io"><option>Outdoor</option><option>Indoor</option></select></label>
+      <label>Prize money<input id="a-pz" placeholder="$15,000"></label>
+      <label>Tournament key<input id="a-key" placeholder="M-ITF-TUN-2027-001"></label>
+      <label class="wide">ITF page link<input id="a-url" type="url" placeholder="https://www.itftennis.com/en/tournament/..."></label>
+      <div class="actions wide"><button class="btn primary" type="submit">Add to calendar</button><span class="note-ghost" id="addMsg"></span></div>
+    </form>
+    <div id="customList" class="cal-list" style="margin-top:14px"></div>
+  </section>
+
+  <p class="src">Data: ITF Men's World Tennis Tour calendar, read Oct 12, 2026, plus fact sheets for the October events (draw sizes, tournament directors). Fact sheets for later weeks weren't published yet. Check each event's ITF page before entering. <a href="https://www.itftennis.com/en/tournament-calendar/mens-world-tennis-tour-calendar/" target="_blank" rel="noopener">ITF men's calendar ↗</a></p>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const EVENTS = [{"k":"M-ITF-ANG-2026-002","s":"2026-10-12","e":"2026-10-18","c":"M25","n":"M25 Luanda","p":"Kikuxi Open I","nat":"ANG","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-luanda/ang/2026/m-itf-ang-2026-002/"},{"k":"M-ITF-ITA-2026-043","s":"2026-10-12","e":"2026-10-17","c":"M25","n":"M25 Santa Margherita di Pula","p":"Fortevillage ITF Trophy","nat":"ITA","sf":"Clay","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-santa-margherita-di-pula/ita/2026/m-itf-ita-2026-043/"},{"k":"M-ITF-CHN-2026-022","s":"2026-10-12","e":"2026-10-18","c":"M25","n":"M25 Qian Daohu","p":"M25 Qian Daohu","nat":"CHN","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-qian-daohu/chn/2026/m-itf-chn-2026-022/"},{"k":"M-ITF-USA-2026-045","s":"2026-10-12","e":"2026-10-18","c":"M25","n":"M25 Austin, TX","p":"Greenview Development & Majestic Realty Pro Tennis Open","nat":"USA","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-austin-tx/usa/2026/m-itf-usa-2026-045/"},{"k":"M-ITF-IND-2026-010","s":"2026-10-12","e":"2026-10-18","c":"M25","n":"M25 Solapur","p":"MSLTA SDLTA ITF Mens $25K Tennis Tournament","nat":"IND","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-solapur/ind/2026/m-itf-ind-2026-010/"},{"k":"M-ITF-ECU-2026-008","s":"2026-10-12","e":"2026-10-18","c":"M15","n":"M15 Quito","p":"Copa MG","nat":"ECU","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-quito/ecu/2026/m-itf-ecu-2026-008/"},{"k":"M-ITF-TUN-2026-041","s":"2026-10-12","e":"2026-10-18","c":"M15","n":"M15 Monastir","p":"Magic Hotel Tours by FTT","nat":"TUN","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-monastir/tun/2026/m-itf-tun-2026-041/"},{"k":"M-ITF-EGY-2026-017","s":"2026-10-12","e":"2026-10-18","c":"M15","n":"M15 Sharm ElSheikh","p":"Egypt 20 Sharm ElSheikh Men's Future","nat":"EGY","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-sharm-elsheikh/egy/2026/m-itf-egy-2026-017/"},{"k":"M-ITF-CRO-2026-008","s":"2026-10-12","e":"2026-10-18","c":"M15","n":"M15 Bol","p":"Bluesun Bol Open","nat":"CRO","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-bol/cro/2026/m-itf-cro-2026-008/"},{"k":"M-ITF-HUN-2026-006","s":"2026-10-12","e":"2026-10-18","c":"M15","n":"M15 Szabolcsveresmart","p":"HNTA Open","nat":"HUN","sf":"Hard","io":"Indoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-szabolcsveresmart/hun/2026/m-itf-hun-2026-006/"},{"k":"M-ITF-BRA-2026-004","s":"2026-10-12","e":"2026-10-18","c":"M15","n":"M15 Maringa","p":"M15 Maringa","nat":"BRA","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-maringa/bra/2026/m-itf-bra-2026-004/"},{"k":"M-ITF-GRE-2026-012","s":"2026-10-12","e":"2026-10-18","c":"M15","n":"M15 Heraklion","p":"M15 HERAKLION","nat":"GRE","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-heraklion/gre/2026/m-itf-gre-2026-012/"},{"k":"M-ITF-USA-2026-042","s":"2026-10-12","e":"2026-10-18","c":"M15","n":"M15 Lexington, KY","p":"Kentucky M15","nat":"USA","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-lexington-ky/usa/2026/m-itf-usa-2026-042/"},{"k":"M-ITF-GER-2026-001","s":"2026-10-12","e":"2026-10-17","c":"M15","n":"M15 Offenbach","p":"M15 Offenbach","nat":"GER","sf":"Hard","io":"Indoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-offenbach/ger/2026/m-itf-ger-2026-001/"},{"k":"M-ITF-ITA-2026-044","s":"2026-10-19","e":"2026-10-24","c":"M25","n":"M25 Santa Margherita di Pula","p":"Fortevillage ITF Trophy","nat":"ITA","sf":"Clay","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-santa-margherita-di-pula/ita/2026/m-itf-ita-2026-044/"},{"k":"M-ITF-GBR-2026-007","s":"2026-10-19","e":"2026-10-24","c":"M25","n":"M25 Redbridge","p":"Lexus British Pro Series Redbridge","nat":"GBR","sf":"Hard","io":"Indoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-redbridge/gbr/2026/m-itf-gbr-2026-007/"},{"k":"M-ITF-ANG-2026-001","s":"2026-10-19","e":"2026-10-25","c":"M25","n":"M25 Luanda","p":"Kikuxi Open II","nat":"ANG","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-luanda/ang/2026/m-itf-ang-2026-001/"},{"k":"M-ITF-FRA-2026-022","s":"2026-10-19","e":"2026-10-25","c":"M25","n":"M25 Sarreguemines","p":"Internationaux de Sarreguemines","nat":"FRA","sf":"Carpet","io":"Indoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-sarreguemines/fra/2026/m-itf-fra-2026-022/"},{"k":"M-ITF-AUS-2026-011","s":"2026-10-19","e":"2026-10-25","c":"M25","n":"M25 Tamworth","p":"Capital of Country International #1","nat":"AUS","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-tamworth/aus/2026/m-itf-aus-2026-011/"},{"k":"M-ITF-IND-2026-011","s":"2026-10-19","e":"2026-10-25","c":"M25","n":"M25 Mumbai","p":"MSLTA ITF Mens M25 Tennis Championship 2026","nat":"IND","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-mumbai/ind/2026/m-itf-ind-2026-011/"},{"k":"M-ITF-CHN-2026-033","s":"2026-10-19","e":"2026-10-25","c":"M15","n":"M15 Shenzhen","p":"2026 Guangming Open","nat":"CHN","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-shenzhen/chn/2026/m-itf-chn-2026-033/"},{"k":"M-ITF-USA-2026-041","s":"2026-10-19","e":"2026-10-25","c":"M15","n":"M15 Ithaca, NY","p":"M15 Ithaca, NY","nat":"USA","sf":"Hard","io":"Indoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-ithaca/usa/2026/m-itf-usa-2026-041/"},{"k":"M-ITF-GRE-2026-013","s":"2026-10-19","e":"2026-10-25","c":"M15","n":"M15 Heraklion","p":"M15 HERAKLION","nat":"GRE","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-heraklion/gre/2026/m-itf-gre-2026-013/"},{"k":"M-ITF-TUN-2026-042","s":"2026-10-19","e":"2026-10-25","c":"M15","n":"M15 Monastir","p":"Magic Hotel Tours by FTT","nat":"TUN","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-monastir/tun/2026/m-itf-tun-2026-042/"},{"k":"M-ITF-EGY-2026-029","s":"2026-10-19","e":"2026-10-25","c":"M15","n":"M15 Sharm ElSheikh","p":"Egypt 21 Sharm ElSheikh Men's Future","nat":"EGY","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-sharm-elsheikh/egy/2026/m-itf-egy-2026-029/"},{"k":"M-ITF-JPN-2026-001","s":"2026-10-19","e":"2026-10-25","c":"M15","n":"M15 Tanagura","p":"RENAISSANCE International Open Tennis","nat":"JPN","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-tanagura/jpn/2026/m-itf-jpn-2026-001/"},{"k":"M-ITF-BRA-2026-012","s":"2026-10-19","e":"2026-10-25","c":"M15","n":"M15 Maceio","p":"Maceió Tennis Experience","nat":"BRA","sf":"Clay","io":"Indoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-maceio/bra/2026/m-itf-bra-2026-012/"},{"k":"M-ITF-CRO-2026-009","s":"2026-10-19","e":"2026-10-25","c":"M15","n":"M15 Bol","p":"Bluesun Bol Open","nat":"CRO","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-bol/cro/2026/m-itf-cro-2026-009/"},{"k":"M-ITF-SGP-2026-004","s":"2026-10-19","e":"2026-10-25","c":"M15","n":"M15 Singapore","p":"M15 Singapore ITF World Tennis Tour (IV) 2026","nat":"SGP","sf":"Hard","io":"Indoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-singapore/sgp/2026/m-itf-sgp-2026-004/"},{"k":"M-ITF-GBR-2026-008","s":"2026-10-26","e":"2026-11-01","c":"M25","n":"M25 Sheffield","p":"Lexus British Pro Series Sheffield","nat":"GBR","sf":"Hard","io":"Indoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-sheffield/gbr/2026/m-itf-gbr-2026-008/"},{"k":"M-ITF-AUS-2026-012","s":"2026-10-26","e":"2026-11-01","c":"M25","n":"M25 Tamworth","p":"Capital of Country International #2","nat":"AUS","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-tamworth/aus/2026/m-itf-aus-2026-012/"},{"k":"M-ITF-USA-2026-044","s":"2026-10-26","e":"2026-11-01","c":"M25","n":"M25 Norman, OK","p":"Norman Open","nat":"USA","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-norman-ok/usa/2026/m-itf-usa-2026-044/"},{"k":"M-ITF-USA-2026-040","s":"2026-10-26","e":"2026-11-01","c":"M25","n":"M25 Las Vegas, NV","p":"Dragonridge Open","nat":"USA","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-las-vegas-nv/usa/2026/m-itf-usa-2026-040/"},{"k":"M-ITF-MLT-2026-001","s":"2026-10-26","e":"2026-11-01","c":"M25","n":"M25 Malta","p":"M25 Malta","nat":"MLT","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-malta/mlt/2026/m-itf-mlt-2026-001/"},{"k":"M-ITF-MEX-2026-007","s":"2026-10-26","e":"2026-10-31","c":"M15","n":"M15 Mazatlan","p":"Open Tennis Tour Mazatlan M15","nat":"MEX","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-mazatlan/mex/2026/m-itf-mex-2026-007/"},{"k":"M-ITF-SGP-2026-003","s":"2026-10-26","e":"2026-11-01","c":"M15","n":"M15 Singapore","p":"M15 Singapore ITF World Tennis Tour (III) 2026","nat":"SGP","sf":"Hard","io":"Indoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-singapore/sgp/2026/m-itf-sgp-2026-003/"},{"k":"M-ITF-TUN-2026-043","s":"2026-10-26","e":"2026-11-01","c":"M15","n":"M15 Monastir","p":"Magic Hotel Tours by FTT","nat":"TUN","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-monastir/tun/2026/m-itf-tun-2026-043/"},{"k":"M-ITF-EGY-2026-030","s":"2026-10-26","e":"2026-11-01","c":"M15","n":"M15 Sharm ElSheikh","p":"Egypt 22 Sharm ElSheikh Men's Future","nat":"EGY","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-sharm-elsheikh/egy/2026/m-itf-egy-2026-030/"},{"k":"M-ITF-ITA-2026-038","s":"2026-10-26","e":"2026-11-01","c":"M15","n":"M15 Selva Gardena","p":"M15 Selva Gardena","nat":"ITA","sf":"Hard","io":"Indoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-selva-gardena/ita/2026/m-itf-ita-2026-038/"},{"k":"M-ITF-JPN-2026-014","s":"2026-10-26","e":"2026-11-01","c":"M15","n":"M15 Yanagawa City","p":"M15 Yanagawa City","nat":"JPN","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-yanagawa-city/jpn/2026/m-itf-jpn-2026-014/"},{"k":"M-ITF-GRE-2026-014","s":"2026-10-26","e":"2026-11-01","c":"M15","n":"M15 Heraklion","p":"M15 HERAKLION","nat":"GRE","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-heraklion/gre/2026/m-itf-gre-2026-014/"},{"k":"M-ITF-BRA-2026-019","s":"2026-10-26","e":"2026-11-01","c":"M15","n":"M15 João Pessoa","p":"M15 João Pessoa","nat":"BRA","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-joao-pessoa/bra/2026/m-itf-bra-2026-019/"},{"k":"M-ITF-UZB-2026-001","s":"2026-10-26","e":"2026-11-01","c":"M15","n":"M15 Fergana","p":"Pepsi Cup","nat":"UZB","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-fergana/uzb/2026/m-itf-uzb-2026-001/"},{"k":"M-ITF-BER-2026-001","s":"2026-10-26","e":"2026-11-01","c":"M15","n":"M15 Pembroke","p":"Bermuda World Tennis Open 1","nat":"BER","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-pembroke/ber/2026/m-itf-ber-2026-001/"},{"k":"M-ITF-MEX-2026-010","s":"2026-11-02","e":"2026-11-07","c":"M25","n":"M25 Guadalajara","p":"Aspiria Open 2026","nat":"MEX","sf":"Clay","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-guadalajara/mex/2026/m-itf-mex-2026-010/"},{"k":"M-ITF-GRE-2026-015","s":"2026-11-02","e":"2026-11-08","c":"M25","n":"M25 Heraklion","p":"M25 HERAKLION","nat":"GRE","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-heraklion/gre/2026/m-itf-gre-2026-015/"},{"k":"M-ITF-USA-2026-047","s":"2026-11-02","e":"2026-11-08","c":"M25","n":"M25 Harlingen, TX","p":"Harlingen Country Club $30,000 Pro Circuit","nat":"USA","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-harlingen-tx/usa/2026/m-itf-usa-2026-047/"},{"k":"M-ITF-ESP-2026-050","s":"2026-11-02","e":"2026-11-08","c":"M25","n":"M25 Valencia","p":"III ITF FUTURES CIUTAT DE VALENCIA","nat":"ESP","sf":"Clay","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-valencia/esp/2026/m-itf-esp-2026-050/"},{"k":"M-ITF-CAN-2026-004","s":"2026-11-02","e":"2026-11-08","c":"M15","n":"M15 Trois-Rivières","p":"M15 Trois-Rivières","nat":"CAN","sf":"Hard","io":"Indoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-trois-rivieres/can/2026/m-itf-can-2026-004/"},{"k":"M-ITF-USA-2026-048","s":"2026-11-02","e":"2026-11-08","c":"M15","n":"M15 Hilton Head Island, SC","p":"The Dennis Van der Meer Shipyard Cup","nat":"USA","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-hilton-head-island-sc/usa/2026/m-itf-usa-2026-048/"},{"k":"M-ITF-UZB-2026-002","s":"2026-11-02","e":"2026-11-08","c":"M15","n":"M15 Fergana","p":"Pepsi Cup","nat":"UZB","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-fergana/uzb/2026/m-itf-uzb-2026-002/"},{"k":"M-ITF-BRA-2026-015","s":"2026-11-02","e":"2026-11-08","c":"M15","n":"M15 Salvador","p":"ITF M15","nat":"BRA","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-salvador/bra/2026/m-itf-bra-2026-015/"},{"k":"M-ITF-BER-2026-002","s":"2026-11-02","e":"2026-11-08","c":"M15","n":"M15 Pembroke","p":"Bermuda World Tennis Open 2","nat":"BER","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-pembroke/ber/2026/m-itf-ber-2026-002/"},{"k":"M-ITF-TUN-2026-044","s":"2026-11-02","e":"2026-11-08","c":"M15","n":"M15 Monastir","p":"Magic Hotel Tours by FTT","nat":"TUN","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-monastir/tun/2026/m-itf-tun-2026-044/"},{"k":"M-ITF-CHN-2026-034","s":"2026-11-02","e":"2026-11-08","c":"M15","n":"M15 Maanshan","p":"2026 Ma'anshan Open","nat":"CHN","sf":"Hard","io":"Indoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-maanshan/chn/2026/m-itf-chn-2026-034/"},{"k":"M-ITF-EGY-2026-031","s":"2026-11-02","e":"2026-11-08","c":"M15","n":"M15 Sharm ElSheikh","p":"Egypt 23 Sharm ElSheikh Men's Future","nat":"EGY","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-sharm-elsheikh/egy/2026/m-itf-egy-2026-031/"},{"k":"M-ITF-ITA-2026-031","s":"2026-11-02","e":"2026-11-08","c":"M15","n":"M15 San Gregorio di Catania","p":"M15 SAN GREGORIO DI CATANIA","nat":"ITA","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-san-gregorio-di-catania/ita/2026/m-itf-ita-2026-031/"},{"k":"M-ITF-TUR-2026-027","s":"2026-11-02","e":"2026-11-08","c":"M15","n":"M15 Antalya","p":"ANTALYA SERIES","nat":"TUR","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-antalya/tur/2026/m-itf-tur-2026-027/"},{"k":"M-ITF-CAN-2026-005","s":"2026-11-09","e":"2026-11-15","c":"M25","n":"M25 Montreal","p":"M25 Montreal","nat":"CAN","sf":"Hard","io":"Indoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-montreal/can/2026/m-itf-can-2026-005/"},{"k":"M-ITF-ITA-2026-032","s":"2026-11-09","e":"2026-11-15","c":"M25","n":"M25 San Gregorio di Catania","p":"CITTA' DI SAN GREGORIO","nat":"ITA","sf":"Clay","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-san-gregorio-di-catania/ita/2026/m-itf-ita-2026-032/"},{"k":"M-ITF-BRA-2026-020","s":"2026-11-09","e":"2026-11-15","c":"M25","n":"M25 Santa Cruz do Sul","p":"M25 Santa Cruz do Sul","nat":"BRA","sf":"Clay","io":"Indoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-santa-cruz-do-sul/bra/2026/m-itf-bra-2026-020/"},{"k":"M-ITF-USA-2026-049","s":"2026-11-09","e":"2026-11-15","c":"M25","n":"M25 Columbus, OH","p":"Columbus M25","nat":"USA","sf":"Hard","io":"Indoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-columbus-oh/usa/2026/m-itf-usa-2026-049/"},{"k":"M-ITF-POR-2026-015","s":"2026-11-09","e":"2026-11-15","c":"M25","n":"M25 Vale do Lobo","p":"M25 VALE DO LOBO","nat":"POR","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-vale-do-lobo/por/2026/m-itf-por-2026-015/"},{"k":"M-ITF-THA-2026-013","s":"2026-11-09","e":"2026-11-15","c":"M15","n":"M15 Hua Hin","p":"CAL-COMP & CCAU INDUSTRY 4.0 ITF World Tennis Tour 2026 (1)","nat":"THA","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-hua-hin/tha/2026/m-itf-tha-2026-013/"},{"k":"M-ITF-USA-2026-051","s":"2026-11-09","e":"2026-11-15","c":"M15","n":"M15 Naples, FL","p":"M15 Naples, FL","nat":"USA","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-naples-fl/usa/2026/m-itf-usa-2026-051/"},{"k":"M-ITF-MAS-2026-001","s":"2026-11-09","e":"2026-11-15","c":"M15","n":"M15 Kuala Lumpur","p":"M15 KL ITF WORLD TENNIS TOUR 2026 (1)","nat":"MAS","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-kuala-lumpur/mas/2026/m-itf-mas-2026-001/"},{"k":"M-ITF-TUN-2026-045","s":"2026-11-09","e":"2026-11-15","c":"M15","n":"M15 Monastir","p":"Magic Hotel Tours by FTT","nat":"TUN","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-monastir/tun/2026/m-itf-tun-2026-045/"},{"k":"M-ITF-CHN-2026-035","s":"2026-11-09","e":"2026-11-15","c":"M15","n":"M15 Maanshan","p":"2026 Ma'anshan Open","nat":"CHN","sf":"Hard","io":"Indoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-maanshan/chn/2026/m-itf-chn-2026-035/"},{"k":"M-ITF-ARG-2026-010","s":"2026-11-09","e":"2026-11-15","c":"M15","n":"M15 Roldan","p":"M15 Roldan","nat":"ARG","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-roldan/arg/2026/m-itf-arg-2026-010/"},{"k":"M-ITF-TUR-2026-028","s":"2026-11-09","e":"2026-11-15","c":"M15","n":"M15 Antalya","p":"ANTALYA SERIES","nat":"TUR","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-antalya/tur/2026/m-itf-tur-2026-028/"},{"k":"M-ITF-EGY-2026-032","s":"2026-11-09","e":"2026-11-15","c":"M15","n":"M15 Sharm ElSheikh","p":"Egypt 24 Sharm ElSheikh Men's Future","nat":"EGY","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-sharm-elsheikh/egy/2026/m-itf-egy-2026-032/"},{"k":"M-ITF-MEX-2026-012","s":"2026-11-09","e":"2026-11-14","c":"M15","n":"M15 Zamora","p":"M15 Michoacan","nat":"MEX","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-zamora/mex/2026/m-itf-mex-2026-012/"},{"k":"M-ITF-ESP-2026-041","s":"2026-11-09","e":"2026-11-15","c":"M15","n":"M15 Las Palmas de Gran Canaria","p":"M15 Las Palmas de Gran Canaria","nat":"ESP","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-las-palmas-de-gran-canaria/esp/2026/m-itf-esp-2026-041/"},{"k":"M-ITF-GRE-2026-016","s":"2026-11-09","e":"2026-11-15","c":"M15","n":"M15 Heraklion","p":"M15 HERAKLION","nat":"GRE","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-heraklion/gre/2026/m-itf-gre-2026-016/"},{"k":"M-ITF-GRE-2026-017","s":"2026-11-16","e":"2026-11-22","c":"M25","n":"M25 Heraklion","p":"M25 HERAKLION","nat":"GRE","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-heraklion/gre/2026/m-itf-gre-2026-017/"},{"k":"M-ITF-POR-2026-016","s":"2026-11-16","e":"2026-11-22","c":"M25","n":"M25 Vale do Lobo","p":"M25 VALE DO LOBO","nat":"POR","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-vale-do-lobo/por/2026/m-itf-por-2026-016/"},{"k":"M-ITF-USA-2026-050","s":"2026-11-16","e":"2026-11-22","c":"M25","n":"M25 Bradenton, FL","p":"Inspiration Tennis Academy Men's $25k ITF","nat":"USA","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-bradenton/usa/2026/m-itf-usa-2026-050/"},{"k":"M-ITF-IND-2026-007","s":"2026-11-16","e":"2026-11-22","c":"M25","n":"M25 Bhubaneswar","p":"M25 Bhubaneswar","nat":"IND","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-bhubaneswar/ind/2026/m-itf-ind-2026-007/"},{"k":"M-ITF-TUN-2026-046","s":"2026-11-16","e":"2026-11-22","c":"M25","n":"M25 Monastir","p":"Magic Hotel Tours by FTT","nat":"TUN","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-monastir/tun/2026/m-itf-tun-2026-046/"},{"k":"M-ITF-BRA-2026-021","s":"2026-11-16","e":"2026-11-22","c":"M25","n":"M25 Lajeado","p":"M25 Lajeado","nat":"BRA","sf":"Clay","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-lajeado/bra/2026/m-itf-bra-2026-021/"},{"k":"M-ITF-MEX-2026-011","s":"2026-11-16","e":"2026-11-22","c":"M25","n":"M25 Chihuahua","p":"TORNEO M2 AKARI","nat":"MEX","sf":"Clay","io":"Outdoor","pz":"$25,000","url":"https://www.itftennis.com/en/tournament/m25-chihuahua/mex/2026/m-itf-mex-2026-011/"},{"k":"M-ITF-EGY-2026-033","s":"2026-11-16","e":"2026-11-22","c":"M15","n":"M15 Sharm ElSheikh","p":"Egypt 25 Sharm ElSheikh Men's Future","nat":"EGY","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-sharm-elsheikh/egy/2026/m-itf-egy-2026-033/"},{"k":"M-ITF-ESP-2026-052","s":"2026-11-16","e":"2026-11-22","c":"M15","n":"M15 Alcalá de Henares","p":"Open Internacional Ciudad de Alcalá de Henares","nat":"ESP","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-alcala-de-henares/esp/2026/m-itf-esp-2026-052/"},{"k":"M-ITF-TUR-2026-029","s":"2026-11-16","e":"2026-11-22","c":"M15","n":"M15 Antalya","p":"ANTALYA SERIES","nat":"TUR","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-antalya/tur/2026/m-itf-tur-2026-029/"},{"k":"M-ITF-USA-2026-046","s":"2026-11-16","e":"2026-11-22","c":"M15","n":"M15 Orlando, FL","p":"M15 Orlando, FL","nat":"USA","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-orlando/usa/2026/m-itf-usa-2026-046/"},{"k":"M-ITF-MAS-2026-002","s":"2026-11-16","e":"2026-11-22","c":"M15","n":"M15 Kuala Lumpur","p":"M15 KL ITF WORLD TENNIS TOUR 2026 (2)","nat":"MAS","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-kuala-lumpur/mas/2026/m-itf-mas-2026-002/"},{"k":"M-ITF-TUN-2026-047","s":"2026-11-16","e":"2026-11-22","c":"M15","n":"M15 Monastir","p":"Magic Hotel Tours by FTT","nat":"TUN","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-monastir/tun/2026/m-itf-tun-2026-047/"},{"k":"M-ITF-ARG-2026-012","s":"2026-11-16","e":"2026-11-22","c":"M15","n":"M15 Olavarria","p":"M15 Olavarria","nat":"ARG","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-olavarria/arg/2026/m-itf-arg-2026-012/"},{"k":"M-ITF-BOL-2026-002","s":"2026-11-16","e":"2026-11-22","c":"M15","n":"M15 Santa Cruz","p":"M15 Santa Cruz","nat":"BOL","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-santa-cruz/bol/2026/m-itf-bol-2026-002/"},{"k":"M-ITF-THA-2026-014","s":"2026-11-16","e":"2026-11-22","c":"M15","n":"M15 Hua Hin","p":"CAL-COMP & CCAU INDUSTRY 4.0 ITF World Tennis Tour 2026 (2)","nat":"THA","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-hua-hin/tha/2026/m-itf-tha-2026-014/"},{"k":"M-ITF-CZE-2026-005","s":"2026-11-23","e":"2026-11-29","c":"M25","n":"M25 Hradec Kralove","p":"HIT Open Hradec Kralove 2026","nat":"CZE","sf":"Hard","io":"Indoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-hradec-kralove/cze/2026/m-itf-cze-2026-005/"},{"k":"M-ITF-IND-2026-008","s":"2026-11-23","e":"2026-11-29","c":"M25","n":"M25 Bhopal","p":"ARERA CLUB M25 ITF WORLD TENNIS TOURNAMENT","nat":"IND","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-bhopal/ind/2026/m-itf-ind-2026-008/"},{"k":"M-ITF-EGY-2026-034","s":"2026-11-23","e":"2026-11-29","c":"M15","n":"M15 Sharm ElSheikh","p":"Egypt 26 Sharm ElSheikh Men's Future","nat":"EGY","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-sharm-elsheikh/egy/2026/m-itf-egy-2026-034/"},{"k":"M-ITF-TUR-2026-030","s":"2026-11-23","e":"2026-11-29","c":"M15","n":"M15 Antalya","p":"ANTALYA SERIES","nat":"TUR","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-antalya/tur/2026/m-itf-tur-2026-030/"},{"k":"M-ITF-BOL-2026-003","s":"2026-11-23","e":"2026-11-29","c":"M15","n":"M15 Santa Cruz","p":"Santa Cruz M15 Urbarí Tenis Club","nat":"BOL","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-santa-cruz/bol/2026/m-itf-bol-2026-003/"},{"k":"M-ITF-ESP-2026-046","s":"2026-11-23","e":"2026-11-29","c":"M15","n":"M15 Madrid","p":"III TORNEO INTERNACIONAL MIRASIERRA","nat":"ESP","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-madrid/esp/2026/m-itf-esp-2026-046/"},{"k":"M-ITF-TUN-2026-048","s":"2026-11-23","e":"2026-11-29","c":"M15","n":"M15 Monastir","p":"Magic Hotel Tours by FTT","nat":"TUN","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-monastir/tun/2026/m-itf-tun-2026-048/"},{"k":"M-ITF-GRE-2026-018","s":"2026-11-23","e":"2026-11-29","c":"M15","n":"M15 Heraklion","p":"M15 HERAKLION","nat":"GRE","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-heraklion/gre/2026/m-itf-gre-2026-018/"},{"k":"M-ITF-USA-2026-053","s":"2026-11-30","e":"2026-12-06","c":"M25","n":"M25 Port St. Lucie, FL","p":"RPS Port St. Lucie Open","nat":"USA","sf":"Clay","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-port-st-lucie-fl/usa/2026/m-itf-usa-2026-053/"},{"k":"M-ITF-DOM-2026-001","s":"2026-11-30","e":"2026-12-06","c":"M25","n":"M25 Punta Cana","p":"M25 Punta Cana","nat":"DOM","sf":"Clay","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-punta-cana/dom/2026/m-itf-dom-2026-001/"},{"k":"M-ITF-BRA-2026-016","s":"2026-11-30","e":"2026-12-06","c":"M25","n":"M25 Barueri","p":"TORNEIO INTERNACIONAL MASCULINO DE TÊNIS- ANO IX","nat":"BRA","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-barueri/bra/2026/m-itf-bra-2026-016/"},{"k":"M-ITF-TUN-2026-049","s":"2026-11-30","e":"2026-12-06","c":"M25","n":"M25 Monastir","p":"Magic Hotel Tours by FTT","nat":"TUN","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-monastir/tun/2026/m-itf-tun-2026-049/"},{"k":"M-ITF-TUN-2026-050","s":"2026-11-30","e":"2026-12-06","c":"M15","n":"M15 Monastir","p":"Magic Hotel Tours by FTT","nat":"TUN","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-monastir/tun/2026/m-itf-tun-2026-050/"},{"k":"M-ITF-IND-2026-009","s":"2026-11-30","e":"2026-12-06","c":"M15","n":"M15 Gwalior","p":"M15 Gwalior","nat":"IND","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-gwalior/ind/2026/m-itf-ind-2026-009/"},{"k":"M-ITF-GRE-2026-019","s":"2026-11-30","e":"2026-12-06","c":"M15","n":"M15 Heraklion","p":"M15 HERAKLION","nat":"GRE","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-heraklion/gre/2026/m-itf-gre-2026-019/"},{"k":"M-ITF-BOL-2026-004","s":"2026-11-30","e":"2026-12-06","c":"M15","n":"M15 Santa Cruz","p":"M15 Santa Cruz Urbarí 2 2026","nat":"BOL","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-santa-cruz/bol/2026/m-itf-bol-2026-004/"},{"k":"M-ITF-PER-2026-001","s":"2026-11-30","e":"2026-12-06","c":"M15","n":"M15 Lima","p":"M15 Lima","nat":"PER","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-lima/per/2026/m-itf-per-2026-001/"},{"k":"M-ITF-EGY-2026-035","s":"2026-11-30","e":"2026-12-06","c":"M15","n":"M15 Sharm ElSheikh","p":"Egypt 27 Sharm ElSheikh Men's Future","nat":"EGY","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-sharm-elsheikh/egy/2026/m-itf-egy-2026-035/"},{"k":"M-ITF-ESP-2026-051","s":"2026-11-30","e":"2026-12-06","c":"M15","n":"M15 Madrid","p":"XII Torneo Internacional Masculino ITF Club de Tenis Chamartín","nat":"ESP","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-madrid/esp/2026/m-itf-esp-2026-051/"},{"k":"M-ITF-TUR-2026-031","s":"2026-11-30","e":"2026-12-06","c":"M15","n":"M15 Antalya","p":"ANTALYA SERIES","nat":"TUR","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-antalya/tur/2026/m-itf-tur-2026-031/"},{"k":"M-ITF-USA-2026-052","s":"2026-11-30","e":"2026-12-06","c":"M15","n":"M15 Tallahassee, FL","p":"Tallahassee Open","nat":"USA","sf":"Hard","io":"Indoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-tallahassee-fl/usa/2026/m-itf-usa-2026-052/"},{"k":"M-ITF-USA-2026-054","s":"2026-11-30","e":"2026-12-06","c":"M15","n":"M15 San Diego, CA","p":"M15 San Diego, CA","nat":"USA","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-san-diego-ca/usa/2026/m-itf-usa-2026-054/"},{"k":"M-ITF-SGP-2026-005","s":"2026-12-07","e":"2026-12-13","c":"M25","n":"M25 Singapore","p":"M25 Singapore ITF World Tennis Tour (V) 2026","nat":"SGP","sf":"Hard","io":"Indoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-singapore/sgp/2026/m-itf-sgp-2026-005/"},{"k":"M-ITF-DOM-2026-002","s":"2026-12-07","e":"2026-12-13","c":"M25","n":"M25 Punta Cana","p":"M25 Punta Cana","nat":"DOM","sf":"Clay","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-punta-cana/dom/2026/m-itf-dom-2026-002/"},{"k":"M-ITF-TUN-2026-051","s":"2026-12-07","e":"2026-12-13","c":"M15","n":"M15 Monastir","p":"Magic Hotel Tours by FTT","nat":"TUN","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-monastir/tun/2026/m-itf-tun-2026-051/"},{"k":"M-ITF-USA-2026-055","s":"2026-12-07","e":"2026-12-13","c":"M15","n":"M15 San Diego, CA","p":"M15 San Diego, CA","nat":"USA","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-san-diego/usa/2026/m-itf-usa-2026-055/"},{"k":"M-ITF-PER-2026-002","s":"2026-12-07","e":"2026-12-13","c":"M15","n":"M15 Lima","p":"M15 Lima","nat":"PER","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-lima/per/2026/m-itf-per-2026-002/"},{"k":"M-ITF-EGY-2026-036","s":"2026-12-07","e":"2026-12-13","c":"M15","n":"M15 Sharm ElSheikh","p":"Egypt 28 Sharm ElSheikh Men's Future","nat":"EGY","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-sharm-elsheikh/egy/2026/m-itf-egy-2026-036/"},{"k":"M-ITF-TUR-2026-032","s":"2026-12-07","e":"2026-12-13","c":"M15","n":"M15 Antalya","p":"ANTALYA SERIES","nat":"TUR","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-antalya/tur/2026/m-itf-tur-2026-032/"},{"k":"M-ITF-NZL-2026-002","s":"2026-12-07","e":"2026-12-13","c":"M15","n":"M15 Hamilton","p":"M15 Bayleys Open","nat":"NZL","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-hamilton/nzl/2026/m-itf-nzl-2026-002/"},{"k":"M-ITF-PER-2026-003","s":"2026-12-14","e":"2026-12-20","c":"M25","n":"M25 Lima","p":"M25 Lima","nat":"PER","sf":"Clay","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-lima/per/2026/m-itf-per-2026-003/"},{"k":"M-ITF-NZL-2026-003","s":"2026-12-14","e":"2026-12-20","c":"M25","n":"M25 Tauranga","p":"Eves Open 2026","nat":"NZL","sf":"Hard","io":"Outdoor","pz":"$25,000","url":"https://www.itftennis.com/en/tournament/m25-tauranga/nzl/2026/m-itf-nzl-2026-003/"},{"k":"M-ITF-DOM-2026-003","s":"2026-12-14","e":"2026-12-20","c":"M25","n":"M25 Punta Cana","p":"M25 Punta Cana","nat":"DOM","sf":"Clay","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-punta-cana/dom/2026/m-itf-dom-2026-003/"},{"k":"M-ITF-TUN-2026-053","s":"2026-12-14","e":"2026-12-20","c":"M25","n":"M25 Monastir","p":"Magic Hotel Tours by FTT","nat":"TUN","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-monastir/tun/2026/m-itf-tun-2026-053/"},{"k":"M-ITF-TUN-2026-052","s":"2026-12-14","e":"2026-12-20","c":"M15","n":"M15 Monastir","p":"Magic Hotel Tours by FTT","nat":"TUN","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-monastir/tun/2026/m-itf-tun-2026-052/"},{"k":"M-ITF-TUR-2026-033","s":"2026-12-14","e":"2026-12-20","c":"M15","n":"M15 Antalya","p":"ANTALYA SERIES","nat":"TUR","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-antalya/tur/2026/m-itf-tur-2026-033/"},{"k":"M-ITF-SGP-2026-006","s":"2026-12-14","e":"2026-12-20","c":"M15","n":"M15 Singapore","p":"M15 Singapore ITF World Tennis Tour (VI) 2026","nat":"SGP","sf":"Hard","io":"Indoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-singapore/sgp/2026/m-itf-sgp-2026-006/"},{"k":"M-ITF-INA-2026-005","s":"2026-12-21","e":"2026-12-27","c":"M15","n":"M15 Bali","p":"AMMAN Men's World Tennis Championship","nat":"INA","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-bali/ina/2026/m-itf-ina-2026-005/"},{"k":"M-ITF-TUR-2026-034","s":"2026-12-21","e":"2026-12-27","c":"M15","n":"M15 Antalya","p":"ANTALYA SERIES","nat":"TUR","sf":"Clay","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-antalya/tur/2026/m-itf-tur-2026-034/"},{"k":"M-ITF-TUN-2026-054","s":"2026-12-21","e":"2026-12-27","c":"M15","n":"M15 Monastir","p":"Magic Hotel Tours by FTT","nat":"TUN","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-monastir/tun/2026/m-itf-tun-2026-054/"},{"k":"M-ITF-INA-2026-006","s":"2026-12-28","e":"2027-01-03","c":"M25","n":"M25 Bali","p":"M25 Bali","nat":"INA","sf":"Hard","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-bali/ina/2026/m-itf-ina-2026-006/"},{"k":"M-ITF-MAR-2026-007","s":"2026-12-28","e":"2027-01-03","c":"M25","n":"M25 Marrakech","p":"Morocco Tennis Tour","nat":"MAR","sf":"Clay","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-marrakech/mar/2026/m-itf-mar-2026-007/"},{"k":"M-ITF-TUN-2026-055","s":"2026-12-28","e":"2027-01-03","c":"M15","n":"M15 Monastir","p":"Magic Hotel Tours by FTT","nat":"TUN","sf":"Hard","io":"Outdoor","pz":"$15,000","url":"https://www.itftennis.com/en/tournament/m15-monastir/tun/2026/m-itf-tun-2026-055/"},{"k":"M-ITF-MAR-2027-001","s":"2027-01-04","e":"2027-01-10","c":"M25","n":"M25 Agadir","p":"Morocco Tennis Tour","nat":"MAR","sf":"Clay","io":"Outdoor","pz":"$30,000","url":"https://www.itftennis.com/en/tournament/m25-agadir/mar/2027/m-itf-mar-2027-001/"}];
+const TODAY = new Date('2026-10-12T12:00:00');
+const COUNTRY = {USA:'United States',EGY:'Egypt',TUN:'Tunisia',CAN:'Canada',MEX:'Mexico',BER:'Bermuda',GRE:'Greece',ESP:'Spain',POR:'Portugal',GBR:'Great Britain',ITA:'Italy',GER:'Germany',HUN:'Hungary',CZE:'Czechia',FRA:'France',MLT:'Malta',TUR:'Turkey',MAR:'Morocco',ANG:'Angola',NGR:'Nigeria',CHN:'China',IND:'India',JPN:'Japan',SGP:'Singapore',THA:'Thailand',MAS:'Malaysia',INA:'Indonesia',UZB:'Uzbekistan',AUS:'Australia',NZL:'New Zealand',BRA:'Brazil',ARG:'Argentina',BOL:'Bolivia',PER:'Peru',ECU:'Ecuador',DOM:'Dominican Rep.',CRO:'Croatia'};
+// From published ITF fact sheets (Oct 2026). EGY/TUN organisers run the whole weekly series.
+const CONTACT = {
+ 'M-ITF-USA-2026-045':{td:'Christo Van Rensburg',em:'dropshotllc@gmail.com',q:32,ven:'Courtyard Racquet Club'},
+ 'M-ITF-USA-2026-042':{td:'Dennis Emery',em:'dennisgemery@gmail.com',q:32,ven:'Hilary J. Boone Tennis Complex, Univ. of Kentucky'},
+ 'M-ITF-USA-2026-041':{td:'Arthur Falkson',em:'abf11@cornell.edu',q:32,ven:'Reis Tennis Center, Cornell'},
+ 'M-ITF-USA-2026-044':{td:'Dawna Johnston',em:'dawnajohnston1@ou.edu',q:32,ven:'Gregg Wadley Tennis Pavilion, Univ. of Oklahoma'},
+ 'M-ITF-USA-2026-040':{td:'Owen Hambrock',em:'owenhambrook@gmail.com',q:32,ven:'Dragon Ridge Country Club, Henderson NV'}
+};
+const SERIES = {
+ EGY:{td:'Adel Mostafa',em:'proactive_tennisreservation@hotmail.com',q:64,ven:'Soho Square, Sharm El Sheikh',series:true},
+ TUN:{td:'Chiheb Belhaj Youssef',em:'director@magictours.tn',q:64,ven:'Magic Hotel Skanes Family, Monastir',series:true}
+};
+// Suggested route for open weeks (US first, Monastir block at year end)
+const SUGGEST = {
+ '2026-10-26':['M-ITF-USA-2026-040','Entry closed Oct 8. Ask Owen Hambrock for a qualifying wild card, or go as an on-site alternate.'],
+ '2026-11-02':['M-ITF-USA-2026-047','Entry closes Thu Oct 15. Enter now and ask for a wild card.'],
+ '2026-11-09':['M-ITF-USA-2026-049','Indoor hard. Entry closes Thu Oct 22.'],
+ '2026-11-16':['M-ITF-USA-2026-050','Outdoor hard in Bradenton. Entry closes Thu Oct 29.'],
+ '2026-11-23':['M-ITF-EGY-2026-034','No US hard court this week. Train, or start a Sharm block with a 64-draw qualifying.'],
+ '2026-11-30':['M-ITF-USA-2026-054','Closest event to home. Entry closes Thu Nov 12.'],
+ '2026-12-07':['M-ITF-USA-2026-055','Second San Diego week, same venue. Entry closes Thu Nov 19.'],
+ '2026-12-14':['M-ITF-TUN-2026-052','Start a three-week Monastir block. 64-draw qualifying.'],
+ '2026-12-21':['M-ITF-TUN-2026-054','Monastir week 2. No US events this week.'],
+ '2026-12-28':['M-ITF-TUN-2026-055','Monastir week 3.']
+};
+const STATUSES=['Considering','WC requested','Entered','Accepted Q','Accepted MD','Alternate','Playing','Withdrawn','Skipped'];
+const REGIONS=[['us','USA',['USA']],['eg','Egypt',['EGY']],['tn','Tunisia',['TUN']],['na','Canada · Mexico · Bermuda',['CAN','MEX','BER']],['all','Everywhere',null]];
+
+let plan = {};      // key -> {status, note}
+let custom = [];    // user-added events
+let db = null;
+const F = {region:new Set(['us','eg','tn']), cat:new Set(['M15','M25']), surf:new Set(['Hard']), io:new Set(['Outdoor','Indoor']), open:false};
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const D=s=>new Date(s+'T12:00:00');
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const fmt=(d,o={month:'short',day:'numeric'})=>d.toLocaleDateString('en-US',o);
+const iso=d=>d.toISOString().slice(0,10);
+function monday(s){const d=D(s);const w=(d.getDay()+6)%7;return addDays(d,-w)}
+function deadlines(ev){const m=monday(ev.s);return {entry:addDays(m,-18),wd:addDays(m,-13)}}
+function daysTo(d){return Math.round((d-TODAY)/864e5)}
+function allEvents(){return EVENTS.concat(custom)}
+function byKey(k){return allEvents().find(e=>e.k===k)}
+function contactFor(ev){return CONTACT[ev.k]||SERIES[ev.nat]||null}
+
+function entryChip(ev){
+  const {entry}=deadlines(ev);const n=daysTo(entry);
+  if(n<0) return `<span class="chip bad">Entry closed ${fmt(entry)} · WC or on-site</span>`;
+  if(n<=7) return `<span class="chip warn">Entry closes ${fmt(entry,{weekday:'short',month:'short',day:'numeric'})} · ${n===0?'today':n+' day'+(n>1?'s':'')}</span>`;
+  return `<span class="chip ok">Entry closes ${fmt(entry,{weekday:'short',month:'short',day:'numeric'})}</span>`;
+}
+function eventCard(ev,opts={}){
+  const c=contactFor(ev);const p=plan[ev.k];
+  const statusSel = p ? `<select data-status="${esc(ev.k)}" id="st-${esc(ev.k)}" aria-label="Status">${STATUSES.map(s=>`<option${s===p.status?' selected':''}>${s}</option>`).join('')}</select>` : '';
+  const conflict = opts.conflict ? ' conflict' : '';
+  return `<article class="card${p?' planned':''}${opts.ghost?' ghost':''}${conflict}">
+    <div class="row1"><span class="cat ${ev.c==='M15'?'m15':''}">${esc(ev.c)}</span><span class="name">${esc(ev.n)}</span><span class="promo">${esc(ev.p&&ev.p!==ev.n?ev.p:'')}</span></div>
+    <div class="meta">
+      <span class="chip">${esc(COUNTRY[ev.nat]||ev.nat)}</span>
+      <span class="chip">${esc(ev.sf)} · ${esc(ev.io)}</span>
+      <span class="chip mono">${esc(ev.pz||'')}</span>
+      <span class="chip mono">${fmt(D(ev.s))}–${fmt(D(ev.e))}</span>
+      ${c&&c.q?`<span class="chip ${c.q>=64?'info':''}">${c.q}-player qualifying${c.series?' (Oct fact sheet)':''}</span>`:''}
+      ${entryChip(ev)}
+      ${opts.conflict?'<span class="chip bad">Clashes with another planned event</span>':''}
+    </div>
+    ${opts.why?`<div class="note-ghost">${esc(opts.why)}</div>`:''}
+    ${c?`<div class="contact">TD ${esc(c.td)}${c.series?' (series organiser)':''} · <code>${esc(c.em)}</code><button class="btn" data-copy="${esc(c.em)}">Copy email</button></div>`:''}
+    ${p?`<label class="note-ghost" for="nt-${esc(ev.k)}">Notes</label><textarea id="nt-${esc(ev.k)}" data-note="${esc(ev.k)}" placeholder="WC email sent, flights, hotel…">${esc(p.note||'')}</textarea>`:''}
+    <div class="actions">
+      ${p?statusSel+`<button class="btn" data-remove="${esc(ev.k)}">Remove from plan</button>`:`<button class="btn primary" data-add="${esc(ev.k)}">Add to my season</button>`}
+      ${ev.url?`<a class="btn" href="${esc(ev.url)}" target="_blank" rel="noopener">ITF page ↗</a>`:''}
+    </div>
+  </article>`;
+}
+
+function weeksRange(){
+  const keys=Object.keys(plan).map(byKey).filter(Boolean);
+  let last=D('2027-01-04');
+  keys.forEach(e=>{const m=monday(e.s);if(m>last)last=m});
+  const out=[];for(let d=monday('2026-10-12');d<=last;d=addDays(d,7))out.push(iso(d));return out;
+}
+function renderSeason(){
+  const active=k=>plan[k]&&!['Withdrawn','Skipped'].includes(plan[k].status);
+  const planned=Object.keys(plan).map(byKey).filter(Boolean);
+  const html=weeksRange().map(w=>{
+    const evs=planned.filter(e=>iso(monday(e.s))===w);
+    const live=evs.filter(e=>active(e.k));
+    const sun=addDays(D(w),6);
+    let body='';
+    if(evs.length){body=evs.map(e=>eventCard(e,{conflict:live.length>1&&active(e.k)})).join('')}
+    else if(SUGGEST[w]&&byKey(SUGGEST[w][0])){body=`<div class="note-ghost">Suggestion</div>`+eventCard(byKey(SUGGEST[w][0]),{ghost:true,why:SUGGEST[w][1]})}
+    else{const n=allEvents().filter(e=>e.sf==='Hard'&&iso(monday(e.s))===w).length;body=`<div class="rest">Open week. ${n?n+' hard-court events worldwide in the ITF calendar tab.':'Nothing published for this week yet.'}</div>`}
+    return `<div class="week"><div class="wk-date"><b>${fmt(D(w))}</b>to ${fmt(sun)}</div><div class="wk-body">${body}</div></div>`;
+  }).join('');
+  $('#weeks').innerHTML=html;
+  // alerts: upcoming deadlines for planned events
+  const al=planned.filter(e=>active(e.k)).map(e=>({e,...deadlines(e)})).filter(x=>daysTo(x.entry)>=0&&['Considering','WC requested'].includes(plan[x.e.k].status)).sort((a,b)=>a.entry-b.entry).slice(0,4);
+  $('#alerts').innerHTML=al.length?al.map(x=>{const n=daysTo(x.entry);return `<div class="alert${n<=7?' urgent':''}"><span class="when">${fmt(x.entry,{weekday:'short',month:'short',day:'numeric'})}</span><span>Enter <b>${esc(x.e.n)}</b> (${esc(x.e.c)}, week of ${fmt(D(x.e.s))}) in Tour Zone · ${n===0?'closes today':n+' days left'}</span></div>`}).join(''):'';
+  $('#seasonLede').textContent=planned.length?'Planned events sit on each Monday. Dashed cards are suggestions for open weeks; add one or leave the week for training.':'Nothing on your plan yet. Dashed cards are suggestions for each week; add the ones you want.';
+  const live=planned.filter(e=>active(e.k));
+  const weeksN=new Set(live.map(e=>iso(monday(e.s)))).size;
+  const abroad=live.filter(e=>e.nat!=='USA').length;
+  const nextDl=al[0];
+  $('#stats').innerHTML=`<div class="stat"><b>${weeksN}</b><span>weeks planned</span></div><div class="stat"><b>${live.length-abroad}</b><span>in the US</span></div><div class="stat"><b>${abroad}</b><span>abroad</span></div><div class="stat"><b>${nextDl?fmt(nextDl.entry):'—'}</b><span>next entry deadline</span></div>`;
+}
+
+function buildFilters(){
+  $('#fRegion').insertAdjacentHTML('beforeend',REGIONS.map(([id,l])=>`<button class="tog" data-f="region" data-v="${id}" aria-pressed="${F.region.has(id)}">${l}</button>`).join(''));
+  $('#fCat').insertAdjacentHTML('beforeend',['M15','M25'].map(v=>`<button class="tog" data-f="cat" data-v="${v}" aria-pressed="${F.cat.has(v)}">${v}</button>`).join(''));
+  $('#fSurf').insertAdjacentHTML('beforeend',['Hard','Clay','Carpet'].map(v=>`<button class="tog" data-f="surf" data-v="${v}" aria-pressed="${F.surf.has(v)}">${v}</button>`).join(''));
+  $('#fIO').insertAdjacentHTML('beforeend',['Outdoor','Indoor'].map(v=>`<button class="tog" data-f="io" data-v="${v}" aria-pressed="${F.io.has(v)}">${v}</button>`).join(''));
+}
+function inRegion(e){if(F.region.has('all'))return true;return REGIONS.some(([id,,codes])=>codes&&F.region.has(id)&&codes.includes(e.nat))}
+function renderCal(){
+  const list=allEvents().filter(e=>inRegion(e)&&F.cat.has(e.c)&&F.surf.has(e.sf)&&F.io.has(e.io)&&(!F.open||daysTo(deadlines(e).entry)>=0))
+    .sort((a,b)=>a.s.localeCompare(b.s)||a.nat.localeCompare(b.nat));
+  $('#count').textContent=`${list.length} event${list.length===1?'':'s'}`;
+  const groups={};list.forEach(e=>{(groups[iso(monday(e.s))]??=[]).push(e)});
+  $('#cal').innerHTML=Object.keys(groups).sort().map(w=>{const dl=addDays(D(w),-18);return `<div class="cal-week"><h3>Week of ${fmt(D(w))}<small>entry ${daysTo(dl)<0?'closed':'closes'} ${fmt(dl,{weekday:'short',month:'short',day:'numeric'})}</small></h3><div class="cal-list">${groups[w].map(e=>eventCard(e)).join('')}</div></div>`}).join('')||'<p class="lede" style="margin-top:16px">No events match these filters. Try adding a region or level.</p>';
+}
+function renderCustom(){
+  $('#customList').innerHTML=custom.length?custom.map(e=>eventCard(e)).join(''):'<p class="note-ghost">Events you add appear here and in the ITF calendar tab.</p>';
+}
+function renderAll(){renderSeason();renderCal();renderCustom()}
+
+// ---- storage: shared db when available, browser storage otherwise
+const LS='gp-planner-v1';
+function lsLoad(){try{const v=JSON.parse(localStorage.getItem(LS)||'{}');plan=v.plan||{};custom=v.custom||[]}catch(e){}}
+function lsSave(){try{localStorage.setItem(LS,JSON.stringify({plan,custom}))}catch(e){}}
+async function savePlan(k){
+  if(db){try{plan[k]?await db.collection('plan').doc(k).set({key:k,...plan[k]}):await db.collection('plan').doc(k).delete()}catch(e){toast('Couldn’t save. Try again in a moment.')}}
+  else lsSave();
+}
+async function saveCustom(ev){
+  if(db){try{await db.collection('custom').doc(ev.k).set(ev)}catch(e){toast('Couldn’t save that event.')}}
+  else lsSave();
+}
+function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2200)}
+
+document.addEventListener('click',async ev=>{
+  const b=ev.target.closest('button,[role=tab]');if(!b)return;
+  if(b.dataset.view){document.querySelectorAll('nav.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));['season','cal','guide','add'].forEach(v=>$('#v-'+v).hidden=v!==b.dataset.view);try{localStorage.setItem(LS+'-tab',b.dataset.view)}catch(e){}return}
+  if(b.dataset.f){const s=F[b.dataset.f],v=b.dataset.v;
+    if(b.dataset.f==='region'&&v==='all'){s.clear();s.add('all')}else{if(b.dataset.f==='region')s.delete('all');s.has(v)?s.delete(v):s.add(v)}
+    document.querySelectorAll(`[data-f="${b.dataset.f}"]`).forEach(x=>x.setAttribute('aria-pressed',s.has(x.dataset.v)));renderCal();return}
+  if(b.id==='fOpen'){F.open=!F.open;b.setAttribute('aria-pressed',F.open);renderCal();return}
+  if(b.dataset.add){const k=b.dataset.add;plan[k]={status:'Considering',note:''};renderAll();toast('Added to your season');await savePlan(k);return}
+  if(b.dataset.remove){const k=b.dataset.remove;delete plan[k];renderAll();toast('Removed');await savePlan(k);return}
+  if(b.dataset.copy){const v=b.dataset.copy;try{await navigator.clipboard.writeText(v);toast('Email copied')}catch(e){const c=b.previousElementSibling;if(c){const r=document.createRange();r.selectNodeContents(c);const s=getSelection();s.removeAllRanges();s.addRange(r)}toast('Email selected. Copy it with your keyboard.')}}
+});
+document.addEventListener('change',async ev=>{
+  const t=ev.target;
+  if(t.dataset.status){const k=t.dataset.status;plan[k]={...plan[k],status:t.value};renderSeason();await savePlan(k)}
+  if(t.dataset.note!==undefined){const k=t.dataset.note;plan[k]={...plan[k],note:t.value};await savePlan(k);toast('Note saved')}
+});
+$('#addForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const s=$('#a-start').value;if(!s)return;
+  const nat=$('#a-nat').value.trim().toUpperCase();
+  const k=($('#a-key').value.trim()||`CUSTOM-${nat}-${s}-${Math.random().toString(36).slice(2,6)}`).toUpperCase();
+  if(allEvents().some(x=>x.k===k)){$('#addMsg').textContent='That tournament key is already in the calendar.';return}
+  const ev={k,s,e:iso(addDays(D(s),6)),c:$('#a-cat').value,n:$('#a-name').value.trim(),p:'',nat,sf:$('#a-sf').value,io:$('#a-io').value,pz:$('#a-pz').value.trim(),url:$('#a-url').value.trim(),custom:true};
+  custom.push(ev);renderAll();$('#addMsg').textContent=`Added ${ev.n}. Entry closes ${fmt(deadlines(ev).entry,{weekday:'short',month:'short',day:'numeric'})}.`;e.target.reset();await saveCustom(ev);
+});
+
+buildFilters();
+try{const t=localStorage.getItem(LS+'-tab');if(t){const b=document.querySelector(`[data-view="${t}"]`);if(b)b.click()}}catch(e){}
+lsLoad();renderAll();
+
+(async()=>{
+  const c=window.claude;if(!c||!c.use)return;
+  db=await c.use('db');if(!db)return;
+  db.collection('plan').onSnapshot(s=>{const p={};s.docs.forEach(d=>{const v=d.data();p[d.id]={status:v.status||'Considering',note:v.note||''}});
+    const focused=document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.note!==undefined;
+    plan=p;if(!focused)renderAll()},()=>{});
+  db.collection('custom').onSnapshot(s=>{custom=s.docs.map(d=>d.data());renderCal();renderCustom();renderSeason()},()=>{});
+})();
+</script>
+
+</body></html>
